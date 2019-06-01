@@ -1,26 +1,48 @@
 const express = require("express");
 const path = require("path");
-
 const app = express();
 const server = require("http").Server(app);
 const io = require("socket.io")(server);
+const routes = require("./routes/routes");
+const cors = require("cors");
 
-io.on("connection", (socket) => {
-    socket.on("connectRoom", (box) => {
-        socket.join(box);
-    });
-});
+class App {
+    constructor() {
+        this.express = express();
+        this.miiddlewares();
+        // this.database();
+        this.routes();
+    }
 
-app.use((req, res, next) => {
-    req.io = io;
+    miiddlewares() {
+        this.express.use(express.json());
+        this.express.use(cors());
 
-    return next();
-});
+        app.use(express.urlencoded({ extended: true }));
+        app.use("/files", express.static(path.resolve(__dirname, "..", "tmp")));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use("/files", express.static(path.resolve(__dirname, "..", "tmp")));
+        io.on("connection", (socket) => {
+            socket.on("connectRoom", (box) => {
+                socket.join(box);
+            });
+        });
 
-app.use(require("./routes/routes"));
+        app.use((req, res, next) => {
+            req.io = io;
 
-server.listen(process.env.PORT || 3002);
+            return next();
+        });
+    }
+
+    /* database() {
+        mongoose.connect(
+            "mongodb+srv://admin:123@cluster0-kgkln.mongodb.net/list?retryWrites=true",
+            { useNewUrlParser: true }
+        );
+    } */
+    routes() {
+        this.express.use(routes);
+    }
+}
+
+module.exports = new App().express;
